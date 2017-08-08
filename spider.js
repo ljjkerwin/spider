@@ -1,10 +1,8 @@
-const http = require('http');
-const fs = require('fs');
-const cheerio = require('cheerio');
 const request = require('request');
-
+const cheerio = require('cheerio');
+const iconv = require('iconv-lite'); 
 const db = require('./db');
-db.connect();
+
 
 
 let page = 0;
@@ -13,6 +11,10 @@ const getUrl = () => {
 }
 
 
+
+
+
+db.connect();
 startRequest(getUrl());
 
 
@@ -23,56 +25,49 @@ startRequest(getUrl());
 
 
 function startRequest(url) {
-  
-  //采用http模块向服务器发起一次get请求      
-  http.get(url, res => {
-    console.log('get url:', url)
+  request({
+    encoding: null,
+    url: getUrl()
 
-    res.setEncoding('utf-8'); //防止中文乱码
+  }, (err, res, body) => {
+    if (err || res.statusCode != 200) {
+      console.error(err);
+      console.error('fail to request page');
+      return;
+    }
 
-    let html = '';
+    let html = iconv.decode(body, 'utf-8').toString();
+    let $ = cheerio.load(html);
 
-    //监听data事件，每次取一块数据
-    res.on('data', chunk => {
-      html += chunk;
-    });
+    let dataCount = 0;
 
-    // 整个网页内容的html获取完毕回调函数
-    res.on('end', function () {
-      let $ = cheerio.load(html); // cheerio模块解析html
+    let $list = $('#content ul');
+    $list.each((i, item) => {
+      let $item = $(item);
 
-      let $list = $('#content ul');
-      $list.each((i, item) => {
-        let $item = $(item);
+      let linkHost = 'http://www.y3600.com';
 
-        let linkHost = 'http://www.y3600.com';
-
-        let data = {
-          title: $item.find('li.tit a').text(),
-          link: linkHost + $item.find('.img').attr('href'),
-          img: $item.find('.img img').attr('src'),
-          // img: getMatch($item.find('.m a').attr('style'), /url\('(.*)'\)/),
-        }
-        // console.log(data)
- 
-        db.insertRow(data.title, data.link ,data.img)
-      });
-
-      // return
-
-      if (page <= 2) {
-        page++;
-        startRequest(getUrl(page));
-      } else {
-        db.end();
+      let data = {
+        title: $item.find('li.tit a').text(),
+        link: linkHost + $item.find('.img').attr('href'),
+        img: $item.find('.img img').attr('src'),
+        // img: getMatch($item.find('.m a').attr('style'), /url\('(.*)'\)/),
       }
 
-
+      db.insertRow(data.title, data.link ,data.img)
+      dataCount++;
     });
 
-  }).on('error', function (err) {
-    console.log(err);
-  });
+    console.log('get!  ', url)
+    console.log('data count:', dataCount)
+
+    if (page >= 1) {
+      db.end();
+    } else {
+      page++;
+      startRequest(getUrl(page));
+    }
+  })
 }
 
 

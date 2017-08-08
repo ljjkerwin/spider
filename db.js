@@ -16,8 +16,24 @@ exports.connect = () => {
       console.log('error connection:', err);
       return
     }
+    
+    connection.query(`CREATE table if not exists news (
+        id int not null auto_increment primary key,
+        add_time timestamp,
+        title varchar(255),
+        link text,
+        img text
+      )`, (err, rows) => {
 
-    console.log('connected as id:', connection.threadId)
+      if (err) {
+        console.log(err);
+        return;
+      }
+
+      if (rows.warningCount == 0) {
+        console.log('---create database')
+      }
+    })
   });
 }
 
