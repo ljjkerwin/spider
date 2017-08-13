@@ -18,16 +18,16 @@ exports.connect = () => {
     }
     
     connection.query(`CREATE table if not exists news (
-        id int not null auto_increment primary key,
-        add_time timestamp,
-        title varchar(255),
+        id int(11) not null auto_increment primary key,
+        add_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        update_time TIMESTAMP,
+        title varchar(255) NOT NULL UNIQUE KEY,
         link text,
         img text
       )`, (err, rows) => {
 
       if (err) {
-        console.log(err);
-        return;
+        throw err;
       }
 
       if (rows.warningCount == 0) {
@@ -49,11 +49,12 @@ exports.end = () => {
 }
 
 
-let insertSql = 'INSERT INTO news (title, link, img) VALUES (?, ?, ?)';
-
 
 exports.insertRow = (title = '', link = '', img = '') => {
-  connection.query(insertSql, [title, link, img], (err, result) => {
+  connection.query(
+    `INSERT INTO news (title, link, img) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE
+    update_time = CURRENT_TIMESTAMP;`
+    , [title, link, img], (err, result) => {
     if (err) {
       console.log(err);
       return;

@@ -24,7 +24,7 @@ startRequest(getUrl());
 
 
 
-function startRequest(url) {
+function startRequest(url, retry = 0) {
   request({
     encoding: null,
     url: getUrl()
@@ -32,9 +32,14 @@ function startRequest(url) {
   }, (err, res, body) => {
     if (err || res.statusCode != 200) {
       console.error(err);
-      console.error('fail to request page');
+      if (retry < 2) {
+        console.log(`fail to request page ${page}, retry`);
+        return startRequest(url, retry + 1) ;
+      }
+      console.error(`fail to request page ${page}`);
       return;
     }
+
 
     let html = iconv.decode(body, 'utf-8').toString();
     let $ = cheerio.load(html);
@@ -61,7 +66,7 @@ function startRequest(url) {
     console.log('get!  ', url)
     console.log('data count:', dataCount)
 
-    if (page >= 1) {
+    if (page >= 0) {
       db.end();
     } else {
       page++;
